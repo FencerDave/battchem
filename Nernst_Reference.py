@@ -14,7 +14,7 @@ from matplotlib import pyplot as plt
 import copy #Used for copy.deepcopy, to NOT DAMAGE THE RAW LIBRARIES.
 
 
-""" CATHODES """        #All V refer to Li/Li+ Reference
+""" CATHODES """        #All V refer to Li/Li+ Reference in 1Molar solutions
 
 E=dict() #Dictionary of Electrodes! That's the Pythonic way (I think!) to use Strings as Variables!
 E["LFP"]    ={1:{"V0":3.20, "1/Z":0.5, "Q":53.}, 
@@ -28,7 +28,7 @@ E["NCA"]    =0 #Research Needed. Cite Sources
 E["NMC111"] =0#Research needed. Can I CREATE this as a mix of LMO, LCO, and LNO??
 E["GRA_Br"] =0 #Include from 2019 Army Research?!? And/or Kinoshita on Carbon
 
-""" ANODES """          #All V refer to Li/Li+ Reference
+""" ANODES """          #All V refer to Li/Li+ Reference in 1Molar solutions
 
 E["GRA_Li"] ={1:{"V0":0.050, "1/Z":0.1, "Q":186.},  #C    -->LiC36 (infinite sub-stages, all smeared together)
               2:{"V0":0.090, "1/Z":1.0, "Q":62.},   #LiC36-->LiC18
@@ -39,7 +39,7 @@ E["NTP"]    = 0 # Proprietary? Consult Tom.
 E["TPO"]    = 0 # Research Needed
 
 
-""" Reference Electrodes """          #All V refer to Li/Li+
+""" Reference Electrodes """          #All V refer to Li/Li+ in 1Molar solutions
 #COMMON KNOWN REFERENCES
 Refs=dict()
 Refs["Li"]   = 0.00      #Lithium Baseline Reference. (Li+ -> Li in 1M LiPF6 Organic E'lyte)
@@ -123,9 +123,9 @@ def Show_Curves(Data,AC): #"Data" is Dictionary of Curve info. "AC" is +1 for Ca
     
     return Qtot, Vtot,VRange
 
+# Testing Cell with Graphite and LCO default electrodes, vs Li+ 
 PlotQ=1 #1 to plot data, 0 to skip
 Ano,Cat=Choose_Electrodes("GRA_Li","LCO","Li")
-
 Q,T,VRange=Show_Curves(Cat,1)
 
 
