@@ -3,8 +3,8 @@
 Created on Sat May 18 09:49:25 2019
 @author: fencerdave
 
-Library reference of Curves to use in the Nernst SOC model. 
-I hate that you can't draw on functions / libraries that you make further down in a script. 
+Library reference of Curves to use in the Nernst SOC model.
+I hate that you can't draw on functions / libraries that you make further down in a script.
 I understand why (to a point), but it's a major annoyance...
 
 """
@@ -17,11 +17,11 @@ import copy #Used for copy.deepcopy, to NOT DAMAGE THE RAW LIBRARIES.
 """ CATHODES """        #All V refer to Li/Li+ Reference in 1Molar solutions
 
 E=dict() #Dictionary of Electrodes! That's the Pythonic way (I think!) to use Strings as Variables!
-E["LFP"]    ={1:{"V0":3.20, "1/Z":0.5, "Q":53.}, 
+E["LFP"]    ={1:{"V0":3.20, "1/Z":0.5, "Q":53.},
               2:{"V0":3.21, "1/Z":0.5, "Q":53.}}                    #NOT REAL. Research Needed. Cite Sources
 E["LMO"]    ={1:{"V0":3.99, "1/Z":1.0, "Q":53.},
               2:{"V0":4.15, "1/Z":1.0, "Q":53.}}                    #Fit to Data from Ref(2) (And Personal research)
-E["LCO"]    ={1:{"V0":3.91, "1/Z":1.0, "Q":25.}, 
+E["LCO"]    ={1:{"V0":3.91, "1/Z":1.0, "Q":25.},
               2:{"V0":4.10, "1/Z":6.0, "Q":25.}} #Research Needed. This is ROUGH EST from Ref(2)
 E["LNO"]    =0 #Research Needed. Cite Sources
 E["NCA"]    =0 #Research Needed. Cite Sources
@@ -46,15 +46,15 @@ Refs["Li"]   = 0.00      #Lithium Baseline Reference. (Li+ -> Li in 1M LiPF6 Org
 Refs["SCE"]  = 3.292     #Saturated Calomel Electrode (Hg+ -> Hg in Hg in Saturated KCL Solution )
 Refs["NCE"]  = 3.331     #NORMAL Calomel Electrode    (1M KCL)
 Refs["AgCl"] = 3.337     #Silver Chloride Electrode   (Ag+ -> Ag in Saturated AgCl Aqueous Solution)
-Refs["MSE"]  = 3.702     #Mercurous Sulfate (sat)     (Hg+ -> Hg in Saturated K2SO4) 
+Refs["MSE"]  = 3.702     #Mercurous Sulfate (sat)     (Hg+ -> Hg in Saturated K2SO4)
 Refs["SHE"]  = 3.534     #Standard Hydrogen Electrode (2H+ -> H2 in Nernst "A=1" (1.13M HCL, 1.02M HF?)
 Refs["NHE"]  = 3.534     #NORMAL Hydrogen Electrode   (2H+ -> H2 in 1 Molar HCL. Essentially the SAME thing.)
-Refs["AgSO"] = 3.732     #Silver Sulfate Electrode    (Ag+ -> Ag in 1 Molar AgSO4 Aqueous Solution)  
+Refs["AgSO"] = 3.732     #Silver Sulfate Electrode    (Ag+ -> Ag in 1 Molar AgSO4 Aqueous Solution)
 
 
 
 def Choose_Electrodes(Ano,Cat,Ref):
-   
+
     AData=copy.deepcopy(E[Ano])
     CData=copy.deepcopy(E[Cat])
     RE=copy.deepcopy(Refs[Ref])
@@ -67,7 +67,7 @@ def Choose_Electrodes(Ano,Cat,Ref):
         CData[D]["V0"]=CData[D]["V0"]-RE    #Adjust V for Ref
         CData[D]["Q"] =abs(CData[D]["Q"])   #Cathodes use pos Q. Just Check.
     return AData, CData
-    
+
 
 """ Program copied/modified from SOC Model"""
 def Show_Curves(Data,AC): #"Data" is Dictionary of Curve info. "AC" is +1 for Cathode, -1 for Anode.
@@ -81,7 +81,7 @@ def Show_Curves(Data,AC): #"Data" is Dictionary of Curve info. "AC" is +1 for Ca
                   "Q": np.zeros(vlen)
                   }
         Curv[i]["Q"] = Q / (1+np.exp(-1/(0.02569*Z)*(Curv[i]["V"]-Vo))) #Nernst Equation
-        
+
         Qtot = np.zeros(vlen)
     for i in Curv:
         Qtot = Qtot + Curv[i]["Q"]
@@ -90,7 +90,7 @@ def Show_Curves(Data,AC): #"Data" is Dictionary of Curve info. "AC" is +1 for Ca
     Qmin = np.min(Qtot)
     Qtot = Qtot - Qmin
     Vtot = Curv[1]["V"]
-    
+
     V=[0,0]
     VRange=[0,0]
     t=0#set trigger
@@ -105,25 +105,31 @@ def Show_Curves(Data,AC): #"Data" is Dictionary of Curve info. "AC" is +1 for Ca
             V[1]=Vtot[i]
     VRange[0]=min(V)
     VRange[1]=max(V)
-    
+
     if PlotQ==1:
         """ PLOT THE DATAS"""
         plt.figure()
         for i in Curv:
             plt.plot(Curv[i]["V"],abs(Curv[i]["Q"]))
-            plt.draw() 
+            plt.draw()
             axes = plt.gca()
             axes.set_xlim(VRange)
-       
+            axes.set_title("Individual Charge Transfers:")
+            axes.set_xlabel("Voltage (V)")
+            axes.set_ylabel("Charge Transfer Q (mAh/g)")
+
         plt.figure()
         plt.plot(Qtot, Vtot)
         axes = plt.gca()
         axes.set_ylim(VRange)
-        plt.draw() 
-    
-    return Qtot, Vtot,VRange
+        axes.set_title("Half Cell Curve:")
+        axes.set_ylabel("Voltage (V)")
+        axes.set_xlabel("Half-Cell Q (mAh/g)")
+        plt.draw()
 
-# Testing Cell with Graphite and LCO default electrodes, vs Li+ 
+    return Qtot, Vtot, VRange
+
+# Testing Cell with Graphite and LCO default electrodes, vs Li+
 PlotQ=1 #1 to plot data, 0 to skip
 Ano,Cat=Choose_Electrodes("GRA_Li","LCO","Li")
 Q,T,VRange=Show_Curves(Cat,1)
@@ -133,7 +139,7 @@ Q,T,VRange=Show_Curves(Cat,1)
 
 
 """ RESEARCH REFERENCES:"""
-#Like a good little scientist, here are a list of places that I got my Data 
+#Like a good little scientist, here are a list of places that I got my Data
 #(Also to prove I'm not using anything proprietary)
 """
 (1) Tables of Common Reference Electrodes (w/ more Refs)
@@ -142,7 +148,7 @@ Q,T,VRange=Show_Curves(Cat,1)
 (2) Common Li-Ion Cathode Curve Estimates
     Advanced Materials for Lithium-Ion Batteries (2012)
     Textbook by Hariharan, Editor: Springer
-    
+
 (3) Electrochemical Info on Graphite/Lithium
     Kinoshita on Carbon (1988)
     Textbook by Kim Kinoshita, Editor: Wiley
@@ -153,8 +159,8 @@ Q,T,VRange=Show_Curves(Cat,1)
 #Ref_SCE  = 0         #Saturated Calomel Electrode (Hg+ -> Hg in Saturated KCL Solution )
 #Ref_NCE  = 0.0389    #NORMAL Calomel Electrode    (Hg+ -> Hg in 1 MOLAR   KCL Solution )
 #Ref_AgCl =-0.045     #Silver Chloride Electrode   (Ag+ -> Ag in Saturated AgCl Aqueous Solution)
-#Ref_MSE  = 0.41      #Mercurous Sulfate           (Hg+ -> Hg in Saturated K2SO4) 
+#Ref_MSE  = 0.41      #Mercurous Sulfate           (Hg+ -> Hg in Saturated K2SO4)
 #Ref_SHE  =-0.242     #Standard Hydrogen Electrode (2H+ -> H2 in Nernst "A=1" (1.13M HCL, 1.02M HF?)
 #Ref_NHE  =-0.242     #NORMAL Hydrogen Electrode   (2H+ -> H2 in 1 Molar HCL. Essentially the SAME thing.)
-#Ref_AgSO = 0.44      #Silver Sulfate Electrode    (Ag+ -> Ag in 1 Molar AgSO4 Aqueous Solution)  
+#Ref_AgSO = 0.44      #Silver Sulfate Electrode    (Ag+ -> Ag in 1 Molar AgSO4 Aqueous Solution)
 #Ref_Li   =-3.292     #Lithium Baseline Reference. (Li+ -> Li in 1M LiPF6 Organic E'lyte)
