@@ -129,13 +129,64 @@ def Show_Curves(Data,AC): #"Data" is Dictionary of Curve info. "AC" is +1 for Ca
 
     return Qtot, Vtot, VRange
 
+
+def combine_curves(Ano, anode_m, Cat, cathode_m, SOC_mAh=-100):
+    """
+    Here we'll combine the curves to get the full Nernst voltage'
+
+    QV Curves are in units of mAh/g (also A*hrs per kg),
+        so units can be entered in g or kg, and will simply have
+        the appropriate scale of units.
+        (For Calculations, We assume mAh and g units)
+    """
+    Ano_QV = [Ano[0]*anode_m, Ano[1]]    # mAh/g*g, Volts
+    Cat_QV = [Cat[0]*cathode_m, Cat[1]]  # mAh/g*g, Volts
+
+    # Adjust SOC values based on mAh imbalance.
+    # POSITIVE SOC shift means Cathode is Over-Charged
+    #   (Corresponding to Subtracting Cathode Q on this plot)
+    if SOC_mAh > 0:
+        Cat_QV[0] += (-abs(SOC_mAh))
+    else:
+        Ano_QV[0] += (-abs(SOC_mAh))
+
+    Qmax = min(max(Cat_QV[0]), max(Ano_QV[0]))
+    Q_range = np.linspace(0, Qmax, 1000)
+    V_range = Q_range*0
+    print(Qmax)
+    cat_loc = 0
+    ano_loc = 0
+    Cell_QV = []
+    for i, Q in enumerate(Q_range):
+        # for a given Q, Loop through both electrodes to find their
+        #   voltage at that Q
+        while Cat_QV[0][cat_loc] < Q and cat_loc < len(Cat_QV[0]):
+            cat_loc += 1
+        else:
+            cat_v = Cat_QV[1][cat_loc]
+
+        while Ano_QV[0][ano_loc] < Q and ano_loc < len(Ano_QV[0]):
+            ano_loc += 1
+        else:
+            ano_v = Ano_QV[1][ano_loc]
+
+        V_range[i] = cat_v - ano_v
+
+    Cell_QV = [Q_range, V_range]
+    return Ano_QV, Cat_QV, Cell_QV
+
+
 # Testing Cell with Graphite and LCO default electrodes, vs Li+
-PlotQ=1 #1 to plot data, 0 to skip
-Ano,Cat=Choose_Electrodes("GRA_Li","LCO","Li")
-Q,T,VRange=Show_Curves(Cat,1)
+PlotQ = 0  # 1 to plot data, 0 to skip
+Ano, Cat = Choose_Electrodes("GRA_Li", "LCO", "Li")
+Cat_mAhg = Show_Curves(Cat, 1)
+Ano_mAhg = Show_Curves(Ano, -1)
 
+Ano_QV, Cat_QV, Cell_QV = combine_curves(Ano_mAhg, 1, Cat_mAhg, 4, SOC_mAh=0)
 
-
+fig, ax = plt.subplots()
+ax.plot(Cell_QV[0],Cell_QV[1])
+ax.set_ylim([0,5])
 
 
 """ RESEARCH REFERENCES:"""
