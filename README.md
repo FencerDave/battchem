@@ -1,3 +1,6 @@
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/FencerDave/battchem/master?filepath=battchem%2Fstatus_and_exploration.ipynb)
+
+
 # Project BattChem: 
 ### Finding the Balance between Empirical data and Electrochemical fundamentals in Battery Engineering
 -----------------------------------------------------------
