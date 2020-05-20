@@ -70,7 +70,7 @@ def Choose_Electrodes(Ano,Cat,Ref):
 
 
 """ Program copied/modified from SOC Model"""
-def Show_Curves(Data,AC): #"Data" is Dictionary of Curve info. "AC" is +1 for Cathode, -1 for Anode.
+def Show_Curves(Data, AC, plotting=0): #"Data" is Dictionary of Curve info. "AC" is +1 for Cathode, -1 for Anode.
     Curv = dict()
     for i in Data: # Generate each Electron-Transfer-Reaction step
         Vo = Data[i]["V0"]
@@ -106,7 +106,7 @@ def Show_Curves(Data,AC): #"Data" is Dictionary of Curve info. "AC" is +1 for Ca
     VRange[0]=min(V)
     VRange[1]=max(V)
 
-    if PlotQ==1:
+    if plotting==1:
         """ PLOT THE DATAS"""
         plt.figure()
         for i in Curv:
