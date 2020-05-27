@@ -228,11 +228,12 @@ def _yrange(minQ, maxQ, Cell_QV):
 
     return y_range
 
+
 def CC_Cycle_RZ(Cell_QV, R=0.5, Z_Ch=1, Z_Dc=1,
-                I_Ch=1, I_Dc=1, Dc_flip=True):
+                I_Ch=1, I_Dc=1, plotR=True, Dc_flip=True):
     """
     Quick-Estimate of Constant-Current Cycling curves
-    Using "Rough" Empirical Parameters:
+    Using "Very Rough" Empirical Parameters:
 
         "R"     : Overall "Ohmic" R baseline (not function of SOC)
 
@@ -243,24 +244,35 @@ def CC_Cycle_RZ(Cell_QV, R=0.5, Z_Ch=1, Z_Dc=1,
     Calculation of Impedance:
         R
     """
+    Ch_R = Cell_QV[0] * 0
+    Dc_R = Cell_QV[0]*0
+    Qmax = max(Cell_QV[0])
 
+    for i in range(len(Cell_QV[0])):
+        Ch_R[i] = R * ((1+Z_Ch) - Z_Ch/2*np.log(1.00001-Cell_QV[0][i]/Qmax))
+        Dc_R[i] = R * ((1+Z_Dc) - Z_Dc/2*np.log(0.00001+Cell_QV[0][i]/Qmax))
 
-R=0.5
-Z_Ch=0.5
-Z_Dc=0.5
+    if plotR:
+        fig, ax = plt.subplots()
+        ax.plot(Cell_QV[0], Ch_R, '-r')
+        ax.plot(Cell_QV[0], Dc_R, '-b')
+        ax.plot([0, Qmax], [R, R], '--k')
+        ax.set_ylim([0, 4*R])
 
-Cell_Q=np.linspace(0,100,1000)
-Ch_R = Cell_Q*0
-Dc_R = Cell_Q*0
-Qmax = max(Cell_Q)
+    Chg_QV = 0 * Cell_QV
+    Dch_QV = 0 * Cell_QV
 
-for i in range(len(Cell_Q)):
-    Ch_R[i] = R * (1 + Z_Ch*np.exp((Cell_Q[i]/Qmax)))
-    Dc_R[i] = R * (1 + Z_Dc*np.exp((1-Cell_Q[i]/Qmax)))
+    Chg_QV[0] = Cell_QV[0]
+    Chg_QV[1] = Cell_QV[1] + (I_Ch * Ch_R)
 
-fig, ax = plt.subplots()
-ax.plot(Cell_Q,Ch_R)
-ax.plot(Cell_Q,Dc_R)
+    if Dc_flip:
+        Dch_QV[0] = copy.deepcopy(Cell_QV[0][::-1])
+        Dch_QV[1] = copy.deepcopy(Cell_QV[1][::-1] - (I_Dc * Dc_R[::-1]))
+    else:
+        Dch_QV[0] = Cell_QV[0]
+        Dch_QV[1] = Cell_QV[1] - (I_Dc * Dc_R)
+
+    return Chg_QV, Dch_QV, tuple(Ch_R, Dc_R)
 
 
 test = 0
