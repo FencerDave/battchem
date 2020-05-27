@@ -27,22 +27,30 @@ E["LNO"]    =0 #Research Needed. Cite Sources
 E["NCA"]    =0 #Research Needed. Cite Sources
 E["NMC111"] =0#Research needed. Can I CREATE this as a mix of LMO, LCO, and LNO??
 E["GRA_Br"] =0 #Include from 2019 Army Research?!? And/or Kinoshita on Carbon
+E["HMnO2"] = {1:{"V0":3.650, "1/Z":1.0, "Q":155.},
+              2:{"V0":3.728, "1/Z":0.2, "Q":020.}, #Research Needed. This is ROUGH EST from Ref(2)
+              3:{"V0":3.878, "1/Z":2.0, "Q":100.}}
 
 """ ANODES """          #All V refer to Li/Li+ Reference in 1Molar solutions
 
-E["GRA_Li"] ={1:{"V0":0.050, "1/Z":0.1, "Q":186.},  #C    -->LiC36 (infinite sub-stages, all smeared together)
-              2:{"V0":0.090, "1/Z":1.0, "Q":62.},   #LiC36-->LiC18
-              3:{"V0":0.25,  "1/Z":2.0, "Q":62.},   #LiC18-->LiC12
-              4:{"V0":0.30,  "1/Z":0.5, "Q":31.}}
-              #5:{"V0":1.5,   "1/Z":10., "Q":15.}}   #LiC12-->LiC6     #Fit to Data from Ref(2)
+E["GRA_Li"] ={1:{"V0":0.050, "1/Z":0.1, "Q":186.},  #LiC12-->LiC6
+              2:{"V0":0.090, "1/Z":1.0, "Q":62.},   #LiC18-->LiC12
+              3:{"V0":0.25,  "1/Z":2.0, "Q":62.},   #LiC36-->LiC18
+              4:{"V0":0.30,  "1/Z":0.5, "Q":31.}}   #C    -->LiC36
 E["NTP"]    = 0 # Proprietary? Consult Tom.
 E["TPO"]    = 0 # Research Needed
+E["Zn_M"]    = {1:{"V0":2.278, "1/Z":0.1, "Q":819.}}   # Zinc Metal
+E["Li_M"]    = {1:{"V0":0.005, "1/Z":0.1, "Q":3862.}}  # Lithium Metal
+E["Pb_M"]    = {1:{"V0":2.460, "1/Z":0.1, "Q":259.}}   # Lead Metal
 
 
 """ Reference Electrodes """          #All V refer to Li/Li+ in 1Molar solutions
 #COMMON KNOWN REFERENCES
 Refs=dict()
 Refs["Li"]   = 0.00      #Lithium Baseline Reference. (Li+ -> Li in 1M LiPF6 Organic E'lyte)
+Refs["Zn"]   = 2.278     # Zinc metal electrode
+Refs["Pb"]   = 2.460     # Lead metal electrode
+
 Refs["SCE"]  = 3.292     #Saturated Calomel Electrode (Hg+ -> Hg in Hg in Saturated KCL Solution )
 Refs["NCE"]  = 3.331     #NORMAL Calomel Electrode    (1M KCL)
 Refs["AgCl"] = 3.337     #Silver Chloride Electrode   (Ag+ -> Ag in Saturated AgCl Aqueous Solution)
@@ -175,18 +183,95 @@ def combine_curves(Ano, anode_m, Cat, cathode_m, SOC_mAh=-100):
     Cell_QV = [Q_range, V_range]
     return Ano_QV, Cat_QV, Cell_QV
 
+def OCV_Build(Ano_Chem, Cat_Chem, Ref="SHE",
+              anode_m=1, cathode_m=1, SOC_mAh=0,
+              fig=None, ax=None, plot=True):
+    '''
+    Full wrapper to generate OCV curves for half cells and full cells
 
-# Testing Cell with Graphite and LCO default electrodes, vs Li+
-PlotQ = 0  # 1 to plot data, 0 to skip
-Ano, Cat = Choose_Electrodes("GRA_Li", "LCO", "Li")
-Cat_mAhg = Show_Curves(Cat, 1)
-Ano_mAhg = Show_Curves(Ano, -1)
+    '''
+    Ano, Cat = Choose_Electrodes(Ano_Chem, Cat_Chem, Ref)
+    PlotQ = 0
+    Cat_mAhg = Show_Curves(Cat, 1)
+    Ano_mAhg = Show_Curves(Ano, -1)
+    Ano_QV, Cat_QV, Cell_QV = combine_curves(
+        Ano_mAhg, anode_m, Cat_mAhg, cathode_m, SOC_mAh)
 
-Ano_QV, Cat_QV, Cell_QV = combine_curves(Ano_mAhg, 1, Cat_mAhg, 4, SOC_mAh=0)
+    if plot and not ax:
+        fig, ax = plt.subplots()
+    else:
+        pass
+
+    if plot:
+        y_range = _yrange(0.001,0.99,Cell_QV)
+        ax.plot(Cell_QV[0],Cell_QV[1])
+        ax.set_ylim(y_range)
+    else:
+        pass
+
+    return Ano_QV, Cat_QV, Cell_QV, ax
+
+def _yrange(minQ, maxQ, Cell_QV):
+    Q_01 = minQ * max(Cell_QV[0])
+    Q_99 = maxQ * max(Cell_QV[0])
+    y_range = [None,None]
+    for i in range(len(Cell_QV[0])):
+        if Cell_QV[0][i] > Q_01 and not y_range[0]:
+            y_range[0] = Cell_QV[1][i]
+        elif Cell_QV[0][i] > Q_99 and not y_range[1]:
+            y_range[1] = Cell_QV[1][i]
+        else:
+            pass
+
+    if not y_range[0] or not y_range[1]:
+        raise AssertionError("Y Range Not Found")
+
+    return y_range
+
+def CC_Cycle_RZ(Cell_QV, R=0.5, Z_Ch=1, Z_Dc=1,
+                I_Ch=1, I_Dc=1, Dc_flip=True):
+    """
+    Quick-Estimate of Constant-Current Cycling curves
+    Using "Rough" Empirical Parameters:
+
+        "R"     : Overall "Ohmic" R baseline (not function of SOC)
+
+        "Z_Ch"  : Charge Exponential parameter
+
+        "Z_Dc"  : Discharge Exponential parameter
+
+    Calculation of Impedance:
+        R
+    """
+
+
+R=0.5
+Z_Ch=0.5
+Z_Dc=0.5
+
+Cell_Q=np.linspace(0,100,1000)
+Ch_R = Cell_Q*0
+Dc_R = Cell_Q*0
+Qmax = max(Cell_Q)
+
+for i in range(len(Cell_Q)):
+    Ch_R[i] = R * (1 + Z_Ch*np.exp((Cell_Q[i]/Qmax)))
+    Dc_R[i] = R * (1 + Z_Dc*np.exp((1-Cell_Q[i]/Qmax)))
 
 fig, ax = plt.subplots()
-ax.plot(Cell_QV[0],Cell_QV[1])
-ax.set_ylim([0,5])
+ax.plot(Cell_Q,Ch_R)
+ax.plot(Cell_Q,Dc_R)
+
+
+test = 0
+if test == 1:
+    # Testing Cell with Graphite and LCO default electrodes, vs Li+
+    PlotQ = 0  # 1 to plot data, 0 to skip
+    fig, ax = plt.subplots()
+    A, C, Cell, ax = OCV_Build("Zn_M", "HMnO2", "Zn",
+                               1, 1, 0, ax=ax)
+else:
+    pass
 
 
 """ RESEARCH REFERENCES:"""
@@ -207,11 +292,16 @@ ax.set_ylim([0,5])
 """
 #Note Research Constltrsr.net/Resources/ref: AgCl is -0.045 vs SCE (SCE is +0.242 vs NHE while AgCl is +0.197) (Also. Li is -3.05 vs NHE)
 # LIST OF REFS FROM ^, all Vs SCE
-#Ref_SCE  = 0         #Saturated Calomel Electrode (Hg+ -> Hg in Saturated KCL Solution )
-#Ref_NCE  = 0.0389    #NORMAL Calomel Electrode    (Hg+ -> Hg in 1 MOLAR   KCL Solution )
-#Ref_AgCl =-0.045     #Silver Chloride Electrode   (Ag+ -> Ag in Saturated AgCl Aqueous Solution)
-#Ref_MSE  = 0.41      #Mercurous Sulfate           (Hg+ -> Hg in Saturated K2SO4)
-#Ref_SHE  =-0.242     #Standard Hydrogen Electrode (2H+ -> H2 in Nernst "A=1" (1.13M HCL, 1.02M HF?)
-#Ref_NHE  =-0.242     #NORMAL Hydrogen Electrode   (2H+ -> H2 in 1 Molar HCL. Essentially the SAME thing.)
-#Ref_AgSO = 0.44      #Silver Sulfate Electrode    (Ag+ -> Ag in 1 Molar AgSO4 Aqueous Solution)
-#Ref_Li   =-3.292     #Lithium Baseline Reference. (Li+ -> Li in 1M LiPF6 Organic E'lyte)
+#Ref_SCE  = 0         # Saturated Calomel Electrode (Hg+ -> Hg in Saturated KCL Solution )
+#Ref_NCE  = 0.0389    # NORMAL Calomel Electrode    (Hg+ -> Hg in 1 MOLAR   KCL Solution )
+#Ref_AgCl =-0.045     # Silver Chloride Electrode   (Ag+ -> Ag in Saturated AgCl Aqueous Solution)
+#Ref_MSE  = 0.410     # Mercurous Sulfate           (Hg+ -> Hg in Saturated K2SO4)
+#Ref_SHE  =-0.242     # Standard Hydrogen Electrode (2H+ -> H2 in Nernst "A=1" (1.13M HCL, 1.02M HF?)
+#Ref_NHE  =-0.242     # NORMAL Hydrogen Electrode   (2H+ -> H2 in 1 Molar HCL. Essentially the SAME thing.)
+#Ref_AgSO = 0.440     # Silver Sulfate Electrode    (Ag+ -> Ag in 1 Molar AgSO4 Aqueous Solution)
+#Ref_Li   =-3.282     # Lithium Baseline Reference. (Li+ -> Li in 1M LiPF6 Organic E'lyte)
+
+# Metals REF vs SHE (See Wikipedia Data page)
+#Ref_Pb   =-0.580   # Lead in 1N Sulfuric acid?
+#Ref_Zn   =-0.762   # Zinc in 1M ZnSO4
+#Ref_Li   =-3.040   # Lithium baseline (agrees with SCE Data)
