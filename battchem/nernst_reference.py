@@ -37,12 +37,17 @@ E["GRA_Li"] ={1:{"V0":0.050, "1/Z":0.1, "Q":186.},  #LiC12-->LiC6
               2:{"V0":0.090, "1/Z":1.0, "Q":62.},   #LiC18-->LiC12
               3:{"V0":0.25,  "1/Z":2.0, "Q":62.},   #LiC36-->LiC18
               4:{"V0":0.30,  "1/Z":0.5, "Q":31.}}   #C    -->LiC36
-E["NTP"]    = 0 # Proprietary? Consult Tom.
-E["TPO"]    = 0 # Research Needed
+
+E["NTP"]    = {1:{"V0":2.39, "1/Z":0.5, "Q":50.},  #PROPRIETARY?
+               2:{"V0":2.44, "1/Z":1.0, "Q":50.},   #Consult Tom
+               3:{"V0":3.20, "1/Z":2.0, "Q":5.0}}
+E["TPO"]    = 0 # Research Needed. Proprietary?
 E["Zn_M"]    = {1:{"V0":2.278, "1/Z":0.1, "Q":819.}}   # Zinc Metal
 E["Li_M"]    = {1:{"V0":0.005, "1/Z":0.1, "Q":3862.}}  # Lithium Metal
 E["Pb_M"]    = {1:{"V0":2.460, "1/Z":0.1, "Q":259.}}   # Lead Metal
 
+
+print("ELECTRODES AVAILABLE:\n\n{}\n".format(E.keys()))
 
 """ Reference Electrodes """          #All V refer to Li/Li+ in 1Molar solutions
 #COMMON KNOWN REFERENCES
@@ -60,6 +65,7 @@ Refs["NHE"]  = 3.534     #NORMAL Hydrogen Electrode   (2H+ -> H2 in 1 Molar HCL.
 Refs["AgSO"] = 3.732     #Silver Sulfate Electrode    (Ag+ -> Ag in 1 Molar AgSO4 Aqueous Solution)
 
 
+print("REFERENCE VOLTAGES AVAILABLE:\n\n{}\n".format(Refs.keys()))
 
 def Choose_Electrodes(Ano,Cat,Ref):
 
@@ -275,13 +281,25 @@ def CC_Cycle_RZ(Cell_QV, R=0.5, Z_Ch=1, Z_Dc=1,
     return Chg_QV, Dch_QV, tuple(Ch_R, Dc_R)
 
 
-test = 0
+test = 1
 if test == 1:
     # Testing Cell with Graphite and LCO default electrodes, vs Li+
     PlotQ = 0  # 1 to plot data, 0 to skip
     fig, ax = plt.subplots()
-    A, C, Cell, ax = OCV_Build("Zn_M", "HMnO2", "Zn",
-                               1, 1, 0, ax=ax)
+    A, C, Cell, ax = OCV_Build(Ano_Chem="NTP", 
+                               Cat_Chem="LMO", 
+                               Ref="Li",
+                               anode_m=1, cathode_m=1.5, 
+                               SOC_mAh=-20, ax=ax)
+    ax.set_title("Full Cell")
+    
+    fig_half, ax_half = plt.subplots()
+    ax_half.plot(A[0],A[1])
+    ax_half.plot(C[0],C[1])
+    ax_half.set_title('Half-Cell Curves vs Reference')
+    #ax_half.set_ylim([0,0.5])
+    
+    
 else:
     pass
 
